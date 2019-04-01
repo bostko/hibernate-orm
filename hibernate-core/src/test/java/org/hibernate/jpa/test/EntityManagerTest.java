@@ -34,6 +34,8 @@ import org.hibernate.stat.Statistics;
 import org.hibernate.testing.TestForIssue;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -51,7 +53,9 @@ public class EntityManagerTest extends BaseEntityManagerFunctionalTestCase {
 		return new Class[] {
 				Item.class,
 				Distributor.class,
-				Wallet.class
+				Wallet.class,
+				Widget.class,
+				Product.class
 		};
 	}
 
@@ -374,6 +378,32 @@ public class EntityManagerTest extends BaseEntityManagerFunctionalTestCase {
 				em.find( Wallet.class, wallet.getSerial() )
 		);
 		assertEquals( "MANUAL", em.getProperties().get( AvailableSettings.FLUSH_MODE ) );
+		em.close();
+	}
+
+	@Test
+	public void testSavingTwiceEntityWithImmutableCollection() {
+		EntityManager em = getOrCreateEntityManager();
+		em.getTransaction().begin();
+
+		Widget widget1 = new Widget();
+		widget1.setName("hammer");
+
+		Widget widget2 = new Widget();
+		widget2.setName("axel");
+
+		Product p = new Product();
+		p.setWidgets(ImmutableList.of(widget1, widget2));
+		em.persist(p);
+
+		p = em.getReference(Product.class,p.getId());
+		em.merge(p);
+
+		em.getTransaction().commit();
+
+		em.clear();
+
+		assertEquals( "AUTO", em.getProperties().get( AvailableSettings.FLUSH_MODE ) );
 		em.close();
 	}
 
